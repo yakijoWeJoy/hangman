@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>תלוי ביניכם</title>
+<meta name="description" content="חבר שלח לך מילה לנחש. תצליח?">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="תלוי ביניכם">
+<meta property="og:title" content="יש לך אתגר! 🎯">
+<meta property="og:description" content="חבר שלח לך מילה לנחש. תצליח לפני שהאיש נתלה?">
+<meta property="og:url" content="https://yakijowejoy.github.io/hangman/">
+<meta property="og:image" content="https://yakijowejoy.github.io/hangman/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="he_IL">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&display=swap">
 <style>
 /* Layout: one narrow column on squared school-notebook paper, a red margin line on the right (RTL) */
@@ -93,6 +107,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
         <h2>הלינק מוכן</h2>
         <p class="sub">שלחו אותו לחבר. כשהוא יסיים, הוא יוכל לשלוח לכם מילה בחזרה.</p>
         <div class="linkbox" id="link"></div>
+        <p class="sub" id="shortst" style="font-size:.85rem" hidden></p>
         <div class="row">
           <button type="button" id="copy">העתקה</button>
           <a class="btn" id="wa" target="_blank" rel="noopener">שליחה בוואטסאפ</a>
@@ -154,13 +169,42 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
   function norm(c){ c = FINALS[c] || c; return c.toLowerCase(); }
   function isLetter(c){ return /[א-תa-zA-Z]/.test(c); }
 
+  /* Compact link format "h": Hebrew letters take 1 byte, ASCII 1 byte, anything else 3 bytes. */
+  function b64u(s){ return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+  function unb64u(t){ var b = t.replace(/-/g,"+").replace(/_/g,"/"); while (b.length % 4) b += "="; return atob(b); }
   function enc(obj){
-    var bytes = new TextEncoder().encode(JSON.stringify(obj)), s = "";
-    bytes.forEach(function(b){ s += String.fromCharCode(b); });
-    return "g" + btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+    var str = [obj.w, obj.h || "", obj.n || ""].join("\u001f"), out = "";
+    for (var i=0;i<str.length;i++){
+      var c = str.charCodeAt(i);
+      if (c >= 0x05D0 && c <= 0x05EA) out += String.fromCharCode(0x80 + c - 0x05D0);
+      else if (c < 0x7F) out += String.fromCharCode(c);
+      else out += String.fromCharCode(0x7F, c >> 8, c & 255);
+    }
+    return "h" + b64u(out);
+  }
+  function decH(tok){
+    var bin = unb64u(tok.slice(1)), s = "";
+    for (var i=0;i<bin.length;i++){
+      var b = bin.charCodeAt(i);
+      if (b >= 0x80 && b <= 0x9A) s += String.fromCharCode(0x05D0 + b - 0x80);
+      else if (b === 0x7F){ if (i + 2 >= bin.length) return null; s += String.fromCharCode((bin.charCodeAt(i+1) << 8) | bin.charCodeAt(i+2)); i += 2; }
+      else if (b < 0x7F) s += String.fromCharCode(b);
+      else return null;
+    }
+    var p = s.split("\u001f");
+    if (p.length !== 3) return null;
+    return { w:p[0], h:p[1], n:p[2] };
+  }
+  function clean(o){
+    if (!o || typeof o.w !== "string") return null;
+    var w = o.w.trim().slice(0,40);
+    if (!w.split("").some(isLetter)) return null;
+    return { w:w, h:String(o.h||"").slice(0,60), n:String(o.n||"").slice(0,20) };
   }
   function dec(tok){
-    if (!tok || tok.charAt(0) !== "g") return null;
+    if (!tok) return null;
+    if (tok.charAt(0) === "h"){ try{ return clean(decH(tok)); }catch(e){ return null; } }
+    if (tok.charAt(0) !== "g") return null;
     try{
       var b = tok.slice(1).replace(/-/g,"+").replace(/_/g,"/");
       while (b.length % 4) b += "=";
@@ -184,7 +228,8 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
 
   $("f").addEventListener("submit", function(e){
     e.preventDefault();
-    var n = $("name").value.trim(), w = $("word").value.trim().replace(/\s+/g," "), h = $("hint").value.trim();
+    var cc = /[\u0000-\u001f]/g;
+    var n = $("name").value.replace(cc,"").trim(), w = $("word").value.replace(cc," ").trim().replace(/\s+/g," "), h = $("hint").value.replace(cc,"").trim();
     var err = "";
     if (!w) err = "כתבו מילה או ביטוי.";
     else if (!w.split("").some(isLetter)) err = "צריך לפחות אות אחת בעברית או באנגלית.";
@@ -192,12 +237,38 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     if (err) return;
     try{ localStorage.setItem("hm_name", n); }catch(e){}
     var url = linkFor(enc({w:w,h:h,n:n}));
-    $("link").textContent = url;
-    var msg = (n ? n + " שלח/ה לך" : "קיבלת") + " משחק איש תלוי. בוא/י ננחש: " + url;
-    $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    setLink(url, n);
     $("copy").textContent = "העתקה";
     $("f").hidden = true; $("share").hidden = false;
+    shorten(url, n);
   });
+
+  function setLink(url, n){
+    $("link").textContent = url;
+    var msg = "🎯 " + (n ? n + " שלח/ה לך" : "קיבלת") + " מילה לנחש! תצליח/י לפני שהאיש נתלה?\n" + url;
+    $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  }
+
+  /* Short link through is.gd (JSONP). If it fails or is slow, the full link stays. */
+  var shortCache = {}, shortSeq = 0;
+  function shorten(url, n){
+    if (shortCache[url]){ setLink(shortCache[url], n); return; }
+    var id = ++shortSeq, cb = "__isgd" + id, done = false, s = document.createElement("script");
+    $("shortst").textContent = "מקצר את הלינק…"; $("shortst").hidden = false;
+    function end(short){
+      if (done) return; done = true;
+      try{ delete window[cb]; }catch(e){ window[cb] = undefined; }
+      if (s.parentNode) s.parentNode.removeChild(s);
+      if (id !== shortSeq || $("share").hidden) return;   // user moved on
+      if (short){ shortCache[url] = short; setLink(short, n); $("shortst").hidden = true; }
+      else { $("shortst").textContent = "לא הצלחתי לקצר, אבל הלינק המלא עובד מצוין."; }
+    }
+    window[cb] = function(r){ end(r && typeof r.shorturl === "string" && /^https:\/\/is\.gd\/\w+$/.test(r.shorturl) ? r.shorturl : null); };
+    s.onerror = function(){ end(null); };
+    setTimeout(function(){ end(null); }, 6000);
+    s.src = "https://is.gd/create.php?format=json&callback=" + cb + "&url=" + encodeURIComponent(url);
+    document.head.appendChild(s);
+  }
   $("copy").addEventListener("click", function(){
     var t = $("link").textContent, btn = this;
     function sel(){ var r = document.createRange(); r.selectNodeContents($("link")); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "סמנו והעתיקו"; }
