@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>תלוי ביניכם</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Varela+Round&display=swap">
+<style>
+/* Layout: one narrow column on squared school-notebook paper, a red margin line on the right (RTL) */
+:root{
+  --paper:#f7f9fc; --grid:#dbe4f2; --ink:#1f3a8a; --ink-soft:#5a6fa8;
+  --margin:#e0525c; --card:#ffffff; --good:#1d8a5a;
+  --display:"Secular One","Arial Hebrew",Arial,sans-serif;
+  --body:"Varela Round","Arial Hebrew",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121a2e; --grid:#1f2b47; --ink:#c9d6ff; --ink-soft:#8d9cc8;
+  --margin:#ff7a83; --card:#1a2440; --good:#4fd39a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121a2e; --grid:#1f2b47; --ink:#c9d6ff; --ink-soft:#8d9cc8;
+  --margin:#ff7a83; --card:#1a2440; --good:#4fd39a; color-scheme:dark}
+*{box-sizing:border-box}
+body{
+  margin:0; direction:rtl; font-family:var(--body); color:var(--ink); font-size:17px; line-height:1.55;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:24px 48px; min-height:100%;
+}
+main{max-width:520px; margin:0 auto; position:relative; padding-right:22px; border-right:2px solid var(--margin); display:flex; flex-direction:column; gap:20px}
+h1{font-family:var(--display); font-weight:400; font-size:2.3rem; line-height:1.1; margin:0; text-wrap:balance}
+h2{font-family:var(--display); font-weight:400; font-size:1.5rem; margin:0; text-wrap:balance}
+p{margin:0}
+.sub{color:var(--ink-soft)}
+.card{background:var(--card); border:2px solid var(--ink); border-radius:14px 4px 14px 4px; padding:18px; display:flex; flex-direction:column; gap:14px; box-shadow:4px 4px 0 var(--ink)}
+label{font-size:.9rem; color:var(--ink-soft); display:flex; flex-direction:column; gap:4px}
+input{font:inherit; color:var(--ink); background:var(--paper); border:2px solid var(--ink-soft); border-radius:8px; padding:10px 12px; width:100%}
+input:focus{outline:none; border-color:var(--ink)}
+button{font-family:var(--display); font-size:1.1rem; cursor:pointer; border:2px solid var(--ink); border-radius:10px; padding:10px 16px; background:var(--ink); color:var(--paper)}
+button.ghost{background:transparent; color:var(--ink)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--margin); outline-offset:2px}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row>*{flex:1 1 140px; text-align:center}
+a.btn{font-family:var(--display); font-size:1.1rem; text-decoration:none; border:2px solid var(--good); color:var(--good); border-radius:10px; padding:10px 16px}
+.err{color:var(--margin); font-size:.95rem}
+.linkbox{font-family:ui-monospace,monospace; font-size:.8rem; direction:ltr; word-break:break-all; background:var(--paper); border:1px dashed var(--ink-soft); padding:8px; border-radius:6px; user-select:all}
+svg{width:100%; max-width:220px; height:auto; align-self:center}
+svg .part{stroke:var(--ink); stroke-width:5; stroke-linecap:round; fill:none; opacity:0; transition:opacity .3s}
+svg .part.on{opacity:1}
+svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:none}
+.word{display:flex; flex-wrap:wrap; justify-content:center; gap:14px 18px; direction:rtl}
+.w{display:flex; gap:5px}
+.ch{width:1.6em; text-align:center; font-family:var(--display); font-size:1.7rem; border-bottom:3px solid var(--ink); min-height:1.5em}
+.ch.sym{border-bottom-color:transparent}
+.ch.miss{color:var(--margin)}
+.kb{display:grid; grid-template-columns:repeat(auto-fill,minmax(40px,1fr)); gap:6px}
+.kb button{padding:8px 0; font-size:1.25rem; background:var(--card); color:var(--ink)}
+.kb button:disabled{opacity:.3; cursor:default}
+.kb button.hit:disabled{opacity:1; background:var(--good); border-color:var(--good); color:var(--card)}
+.meta{display:flex; justify-content:space-between; gap:10px; font-size:.95rem; color:var(--ink-soft); flex-wrap:wrap}
+.hearts{letter-spacing:2px; color:var(--margin)}
+.result{text-align:center}
+.from{font-family:var(--display); font-size:1.15rem}
+@media (prefers-reduced-motion:reduce){svg .part{transition:none}}
+</style>
+</head>
+<body>
+
+
+<main>
+  <!-- CREATE -->
+  <section id="create" hidden>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div>
+        <h1>תלוי ביניכם</h1>
+        <p class="sub">כתבו מילה או ביטוי, שלחו לחבר לינק, ותראו אם הוא מכיר אתכם מספיק טוב כדי לנחש.</p>
+      </div>
+      <form class="card" id="f">
+        <label for="name">השם שלך
+          <input id="name" maxlength="20" placeholder="למשל: דנה" autocomplete="given-name">
+        </label>
+        <label for="word">מילה או ביטוי לניחוש
+          <input id="word" maxlength="40" placeholder="למשל: פלאפל עם חריף" autocomplete="off">
+        </label>
+        <label for="hint">רמז (לא חובה)
+          <input id="hint" maxlength="60" placeholder="למשל: מה אכלנו אחרי הים" autocomplete="off">
+        </label>
+        <p class="err" id="ferr" hidden></p>
+        <button type="submit">צרו לינק</button>
+      </form>
+      <div class="card" id="share" hidden>
+        <h2>הלינק מוכן</h2>
+        <p class="sub">שלחו אותו לחבר. כשהוא יסיים, הוא יוכל לשלוח לכם מילה בחזרה.</p>
+        <div class="linkbox" id="link"></div>
+        <div class="row">
+          <button type="button" id="copy">העתקה</button>
+          <a class="btn" id="wa" target="_blank" rel="noopener">שליחה בוואטסאפ</a>
+        </div>
+        <button type="button" class="ghost" id="again">מילה חדשה</button>
+      </div>
+      <p class="sub" style="font-size:.9rem">רעיון: בחרו משהו שרק שניכם מכירים. בדיחה פנימית, מקום שהייתם בו, שיר שתמיד מתנגן ברכב.</p>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="play" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div>
+        <p class="from" id="from"></p>
+        <p class="sub" id="hintp"></p>
+      </div>
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <path class="base" d="M20 190 H120 M50 190 V20 H130 V40"/>
+        <circle class="part" cx="130" cy="58" r="18"/>
+        <path class="part" d="M130 76 V125"/>
+        <path class="part" d="M130 88 L108 110"/>
+        <path class="part" d="M130 88 L152 110"/>
+        <path class="part" d="M130 125 L112 160"/>
+        <path class="part" d="M130 125 L148 160"/>
+      </svg>
+      <div class="word" id="board" aria-live="polite"></div>
+      <div class="meta"><span>טעויות: <b id="miss">0</b> מתוך 6</span><span class="hearts" id="hearts"></span></div>
+      <div class="kb" id="kb"></div>
+      <div class="card result" id="end" hidden>
+        <h2 id="endt"></h2>
+        <p id="endp"></p>
+        <div class="row">
+          <a class="btn" id="tell" target="_blank" rel="noopener">ספרו לו איך הלך</a>
+          <button type="button" id="back">שלחו מילה בחזרה</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BAD LINK -->
+  <section id="bad" hidden>
+    <div class="card">
+      <h2>הלינק הזה לא שלם</h2>
+      <p>כנראה חלק ממנו נחתך בהעתקה. בקשו מהחבר לשלוח שוב, או צרו מילה משלכם.</p>
+      <button type="button" id="badnew">יצירת מילה</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var BASE = location.href.split("#")[0];
+  var MAX = 6;
+  var HEB = "אבגדהוזחטיכלמנסעפצקרשת".split("");
+  var FINALS = {"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
+  var $ = function(id){ return document.getElementById(id); };
+
+  function norm(c){ c = FINALS[c] || c; return c.toLowerCase(); }
+  function isLetter(c){ return /[א-תa-zA-Z]/.test(c); }
+
+  function enc(obj){
+    var bytes = new TextEncoder().encode(JSON.stringify(obj)), s = "";
+    bytes.forEach(function(b){ s += String.fromCharCode(b); });
+    return "g" + btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function dec(tok){
+    if (!tok || tok.charAt(0) !== "g") return null;
+    try{
+      var b = tok.slice(1).replace(/-/g,"+").replace(/_/g,"/");
+      while (b.length % 4) b += "=";
+      var bin = atob(b), arr = new Uint8Array(bin.length);
+      for (var i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+      var o = JSON.parse(new TextDecoder().decode(arr));
+      if (!o || typeof o.w !== "string") return null;
+      var w = o.w.trim().slice(0,40);
+      if (!w.split("").some(isLetter)) return null;
+      return { w:w, h:String(o.h||"").slice(0,60), n:String(o.n||"").slice(0,20) };
+    }catch(e){ return null; }
+  }
+  function linkFor(tok){ return (BASE || "") + "#" + tok; }
+
+  function show(id){ ["create","play","bad"].forEach(function(s){ $(s).hidden = s !== id; }); window.scrollTo(0,0); }
+
+  /* ---------- create ---------- */
+  var myName = "";
+  try{ myName = localStorage.getItem("hm_name") || ""; }catch(e){}
+  $("name").value = myName;
+
+  $("f").addEventListener("submit", function(e){
+    e.preventDefault();
+    var n = $("name").value.trim(), w = $("word").value.trim().replace(/\s+/g," "), h = $("hint").value.trim();
+    var err = "";
+    if (!w) err = "כתבו מילה או ביטוי.";
+    else if (!w.split("").some(isLetter)) err = "צריך לפחות אות אחת בעברית או באנגלית.";
+    $("ferr").textContent = err; $("ferr").hidden = !err;
+    if (err) return;
+    try{ localStorage.setItem("hm_name", n); }catch(e){}
+    var url = linkFor(enc({w:w,h:h,n:n}));
+    $("link").textContent = url;
+    var msg = (n ? n + " שלח/ה לך" : "קיבלת") + " משחק איש תלוי. בוא/י ננחש: " + url;
+    $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    $("copy").textContent = "העתקה";
+    $("f").hidden = true; $("share").hidden = false;
+  });
+  $("copy").addEventListener("click", function(){
+    var t = $("link").textContent, btn = this;
+    function sel(){ var r = document.createRange(); r.selectNodeContents($("link")); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "סמנו והעתיקו"; }
+    try{
+      navigator.clipboard.writeText(t).then(function(){ btn.textContent = "הועתק"; }, sel);
+    }catch(e){ sel(); }
+  });
+  function freshCreate(){
+    $("word").value = ""; $("hint").value = ""; $("ferr").hidden = true;
+    $("f").hidden = false; $("share").hidden = true; show("create");
+  }
+  $("again").addEventListener("click", freshCreate);
+  $("badnew").addEventListener("click", freshCreate);
+
+  /* ---------- play ---------- */
+  var g = null;
+  function startGame(d){
+    g = { d:d, guessed:{}, miss:0, over:false };
+    $("from").textContent = d.n ? d.n + " מאתגר/ת אותך" : "חבר מאתגר אותך";
+    $("hintp").textContent = d.h ? "רמז: " + d.h : "";
+    $("hintp").hidden = !d.h;
+    var hasLatin = /[a-zA-Z]/.test(d.w);
+    var keys = HEB.slice();
+    if (hasLatin) keys = keys.concat("abcdefghijklmnopqrstuvwxyz".split(""));
+    var kb = $("kb"); kb.innerHTML = "";
+    keys.forEach(function(k){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = k; b.dataset.k = k;
+      b.addEventListener("click", function(){ guess(k); });
+      kb.appendChild(b);
+    });
+    $("end").hidden = true;
+    render(); show("play");
+  }
+  function solved(){
+    return g.d.w.split("").every(function(c){ return !isLetter(c) || g.guessed[norm(c)]; });
+  }
+  function render(){
+    var board = $("board"); board.innerHTML = "";
+    g.d.w.split(" ").forEach(function(word){
+      var wd = document.createElement("div"); wd.className = "w";
+      word.split("").forEach(function(c){
+        var s = document.createElement("span"); s.className = "ch";
+        if (!isLetter(c)){ s.textContent = c; s.classList.add("sym"); }
+        else if (g.guessed[norm(c)]) s.textContent = c;
+        else if (g.over){ s.textContent = c; s.classList.add("miss"); }
+        wd.appendChild(s);
+      });
+      board.appendChild(wd);
+    });
+    var parts = document.querySelectorAll("svg .part");
+    for (var i=0;i<parts.length;i++) parts[i].classList.toggle("on", i < g.miss);
+    $("miss").textContent = g.miss;
+    $("hearts").textContent = "♥".repeat(MAX - g.miss) + "♡".repeat(g.miss);
+  }
+  function guess(k){
+    if (!g || g.over) return;
+    var n = norm(k);
+    if (g.guessed[n]) return;
+    g.guessed[n] = true;
+    var hit = g.d.w.split("").some(function(c){ return isLetter(c) && norm(c) === n; });
+    var btn = $("kb").querySelector('[data-k="'+k+'"]');
+    if (btn){ btn.disabled = true; if (hit) btn.classList.add("hit"); }
+    if (!hit) g.miss++;
+    var won = solved(), lost = g.miss >= MAX;
+    if (won || lost) g.over = true;
+    render();
+    if (g.over) finish(won);
+  }
+  function finish(won){
+    var name = g.d.n || "החבר";
+    $("endt").textContent = won ? "ניחשת!" : "הפעם לא הלך";
+    $("endp").textContent = won
+      ? (g.miss === 0 ? "בלי אף טעות. " + name + " צריך/ה להתאמץ יותר." : "עם " + g.miss + " טעויות. עכשיו תורך לאתגר.")
+      : "התשובה הייתה: " + g.d.w + ". נקמה מתוקה? שלחו מילה בחזרה.";
+    var msg = won
+      ? "פתרתי את \"" + g.d.w + "\" עם " + g.miss + " טעויות 😎 עכשיו תורך"
+      : "נתקעתי ב\"" + g.d.w + "\"... למה דווקא את זה? 😅";
+    $("tell").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    $("end").hidden = false;
+  }
+  $("back").addEventListener("click", freshCreate);
+
+  document.addEventListener("keydown", function(e){
+    if ($("play").hidden || !g || g.over || e.ctrlKey || e.metaKey || e.altKey) return;
+    var k = e.key;
+    if (k && k.length === 1 && isLetter(k)){
+      var base = FINALS[k] || k.toLowerCase();
+      if ($("kb").querySelector('[data-k="'+base+'"]')){ e.preventDefault(); guess(base); }
+    }
+  });
+
+  /* ---------- route ---------- */
+  function route(){
+    var tok = (location.hash || "").slice(1);
+    if (!tok){ show("create"); return; }
+    var d = dec(tok);
+    if (d) startGame(d); else show("bad");
+  }
+  window.addEventListener("hashchange", route);
+  route();
+
+  window.__hm = { enc:enc, dec:dec, guess:guess, state:function(){ return g; } };
+})();
+</script>
+
+</body>
+</html>
