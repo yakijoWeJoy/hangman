@@ -78,6 +78,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
 .from{font-family:var(--display); font-size:1.15rem}
 @media (prefers-reduced-motion:reduce){svg .part{transition:none}}
 </style>
+<script data-goatcounter="https://hangman.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -165,6 +166,8 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
   var HEB = "אבגדהוזחטיכלמנסעפצקרשת".split("");
   var FINALS = {"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
   var $ = function(id){ return document.getElementById(id); };
+  /* Anonymous event counts in GoatCounter. Never sends the word, hint or name. */
+  function track(name){ try{ if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path:name, title:name, event:true }); }catch(e){} }
 
   function norm(c){ c = FINALS[c] || c; return c.toLowerCase(); }
   function isLetter(c){ return /[א-תa-zA-Z]/.test(c); }
@@ -238,6 +241,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     try{ localStorage.setItem("hm_name", n); }catch(e){}
     var url = linkFor(enc({w:w,h:h,n:n}));
     setLink(url, n);
+    track("link-created");
     $("copy").textContent = "העתקה";
     $("f").hidden = true; $("share").hidden = false;
     shorten(url, n);
@@ -260,8 +264,8 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
       try{ delete window[cb]; }catch(e){ window[cb] = undefined; }
       if (s.parentNode) s.parentNode.removeChild(s);
       if (id !== shortSeq || $("share").hidden) return;   // user moved on
-      if (short){ shortCache[url] = short; setLink(short, n); $("shortst").hidden = true; }
-      else { $("shortst").textContent = "לא הצלחתי לקצר, אבל הלינק המלא עובד מצוין."; }
+      if (short){ shortCache[url] = short; setLink(short, n); $("shortst").hidden = true; track("link-shortened"); }
+      else { track("link-short-failed"); $("shortst").textContent = "לא הצלחתי לקצר, אבל הלינק המלא עובד מצוין."; }
     }
     window[cb] = function(r){ end(r && typeof r.shorturl === "string" && /^https:\/\/is\.gd\/\w+$/.test(r.shorturl) ? r.shorturl : null); };
     s.onerror = function(){ end(null); };
@@ -270,6 +274,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     document.head.appendChild(s);
   }
   $("copy").addEventListener("click", function(){
+    track("share-copy");
     var t = $("link").textContent, btn = this;
     function sel(){ var r = document.createRange(); r.selectNodeContents($("link")); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "סמנו והעתיקו"; }
     try{
@@ -280,6 +285,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     $("word").value = ""; $("hint").value = ""; $("ferr").hidden = true;
     $("f").hidden = false; $("share").hidden = true; show("create");
   }
+  $("wa").addEventListener("click", function(){ track("share-whatsapp"); });
   $("again").addEventListener("click", freshCreate);
   $("badnew").addEventListener("click", freshCreate);
 
@@ -302,6 +308,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     });
     $("end").hidden = true;
     render(); show("play");
+    track("game-started");
   }
   function solved(){
     return g.d.w.split("").every(function(c){ return !isLetter(c) || g.guessed[norm(c)]; });
@@ -349,8 +356,10 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
       : "נתקעתי ב\"" + g.d.w + "\"... למה דווקא את זה? 😅";
     $("tell").href = "https://wa.me/?text=" + encodeURIComponent(msg);
     $("end").hidden = false;
+    track(won ? "game-won" : "game-lost");
   }
-  $("back").addEventListener("click", freshCreate);
+  $("back").addEventListener("click", function(){ track("send-back"); freshCreate(); });
+  $("tell").addEventListener("click", function(){ track("tell-friend"); });
 
   document.addEventListener("keydown", function(e){
     if ($("play").hidden || !g || g.over || e.ctrlKey || e.metaKey || e.altKey) return;
