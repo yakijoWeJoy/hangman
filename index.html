@@ -97,8 +97,8 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
   <section id="create" hidden>
     <div style="display:flex;flex-direction:column;gap:20px">
       <div>
-        <h1>תלוי ביניכם</h1>
-        <p class="sub">כתבו מילה או ביטוי, שלחו לחבר לינק, ותראו אם הוא מכיר אתכם מספיק טוב כדי לנחש.</p>
+        <h1 id="ctitle">תלוי ביניכם</h1>
+        <p class="sub" id="csub">כתבו מילה או ביטוי, שלחו לחבר לינק, ותראו אם הוא מכיר אתכם מספיק טוב כדי לנחש.</p>
       </div>
       <form class="card" id="f">
         <label for="name">השם שלך
@@ -176,7 +176,15 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
   var FINALS = {"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
   var $ = function(id){ return document.getElementById(id); };
   /* Anonymous event counts in GoatCounter. Never sends the word, hint or name. */
-  function track(name){ try{ if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path:name, title:name, event:true }); }catch(e){} }
+  /* Events fired before count.js loads (e.g. game-started on page load) wait in a queue. */
+  var tq = [];
+  function gcReady(){ return window.goatcounter && window.goatcounter.count; }
+  function send(name){ try{ window.goatcounter.count({ path:name, title:name, event:true }); }catch(e){} }
+  function track(name){ if (gcReady()) send(name); else tq.push(name); }
+  (function flush(tries){
+    if (gcReady()){ while (tq.length) send(tq.shift()); return; }
+    if (tries < 40) setTimeout(function(){ flush(tries + 1); }, 250);
+  })(0);
 
   function norm(c){ c = FINALS[c] || c; return c.toLowerCase(); }
   function isLetter(c){ return /[א-תa-zA-Z]/.test(c); }
@@ -250,7 +258,7 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
     try{ localStorage.setItem("hm_name", n); }catch(e){}
     var url = linkFor(enc({w:w,h:h,n:n}));
     setLink(url, n);
-    track("link-created");
+    track(replyTo !== null ? "reply-link-created" : "link-created");
     $("copy").textContent = "העתקה";
     $("f").hidden = true; $("share").hidden = false;
     shorten(url, n);
@@ -258,7 +266,9 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
 
   function setLink(url, n){
     $("link").textContent = url;
-    var msg = "🎯 " + (n ? n + " שלח/ה לך" : "קיבלת") + " מילה לנחש! תצליח/י לפני שהאיש נתלה?\n" + url;
+    var msg = replyTo !== null
+      ? "😏 " + (n ? n + " מחזיר/ה לך" : "קיבלת בחזרה") + " מילה! עכשיו תורך לנחש\n" + url
+      : "🎯 " + (n ? n + " שלח/ה לך" : "קיבלת") + " מילה לנחש! תצליח/י לפני שהאיש נתלה?\n" + url;
     $("wa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
   }
 
@@ -290,13 +300,21 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
       navigator.clipboard.writeText(t).then(function(){ btn.textContent = "הועתק"; }, sel);
     }catch(e){ sel(); }
   });
-  function freshCreate(){
+  var replyTo = null;   // name of the friend we are answering, or null for a new challenge
+  var TITLE = $("ctitle").textContent, SUB = $("csub").textContent;
+  function freshCreate(to){
+    replyTo = typeof to === "string" ? to : null;
     $("word").value = ""; $("hint").value = ""; $("ferr").hidden = true;
-    $("f").hidden = false; $("share").hidden = true; $("play").classList.remove("done"); show("create");
+    $("f").hidden = false; $("share").hidden = true; $("play").classList.remove("done");
+    $("ctitle").textContent = replyTo !== null ? "תורך! " + (replyTo ? "אתגרו את " + replyTo : "אתגרו בחזרה") : TITLE;
+    $("csub").textContent = replyTo !== null ? "בחרו מילה שתגרום לו/ה להתאמץ. רק כמה שניות, ותקבלו לינק לשלוח." : SUB;
+    try{ if (location.hash) history.replaceState(null, "", BASE); }catch(e){}
+    show("create");
+    if (replyTo !== null){ try{ $(($("name").value ? "word" : "name")).focus(); }catch(e){} }
   }
   $("wa").addEventListener("click", function(){ track("share-whatsapp"); });
-  $("again").addEventListener("click", freshCreate);
-  $("badnew").addEventListener("click", freshCreate);
+  $("again").addEventListener("click", function(){ freshCreate(); });
+  $("badnew").addEventListener("click", function(){ freshCreate(); });
 
   /* ---------- play ---------- */
   var g = null;
@@ -364,13 +382,14 @@ svg .base{stroke:var(--ink-soft); stroke-width:5; stroke-linecap:round; fill:non
       ? "פתרתי את \"" + g.d.w + "\" עם " + g.miss + " טעויות 😎 עכשיו תורך"
       : "נתקעתי ב\"" + g.d.w + "\"... למה דווקא את זה? 😅";
     $("tell").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    $("back").textContent = g.d.n ? "שלחו ל" + g.d.n + " מילה בחזרה" : "שלחו מילה בחזרה";
     $("end").className = "card result " + (won ? "win" : "lose");
     $("end").hidden = false;
     $("play").classList.add("done");
     window.scrollTo(0, 0);
     track(won ? "game-won" : "game-lost");
   }
-  $("back").addEventListener("click", function(){ track("send-back"); freshCreate(); });
+  $("back").addEventListener("click", function(){ track("send-back"); freshCreate(g && g.d ? g.d.n : ""); });
   $("tell").addEventListener("click", function(){ track("tell-friend"); });
 
   document.addEventListener("keydown", function(e){
